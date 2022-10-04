@@ -48,6 +48,9 @@ answer_model = SentenceTransformer(cfg["MODEL"]["answer_model"])
 wv = WordVector()
 wv_model = wv.get_model()
 
+# tags declaration
+kw = list(cfg["KEYWORD_INTENT"].keys())
+
 # Main function here :
 @app.get("/")
 def index_get():
@@ -57,7 +60,7 @@ def index_get():
 @app.post("/predict")
 def predict():
     text = request.get_json().get("message")
-    msg_manager = DialogueManager(data_corpus, wv_model, answer_model, intent_model, prob_model, tf_vectorizer, device)
+    msg_manager = DialogueManager(data_corpus, wv_model, answer_model, intent_model, prob_model, tf_vectorizer, device, kw)
     response = _get_response(text, msg_manager)
     message =  {"answer" : response}
     return jsonify(message)
