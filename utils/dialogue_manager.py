@@ -1,4 +1,5 @@
 from models.sent_emb_model import SentEmbModel
+from models.distill_emb import DistillEmbModel
 import torch
 import numpy as np
 import pandas as pd
@@ -13,19 +14,27 @@ from models.intent_model import IntentsClassification
 from utils.helper import _float_converter
 
 
+
+
 class DialogueManager():
 
-    def __init__(self,data_corpus, wv_model, sent_emb_model, intent_model, tf_vec, config_dict, custom_dictionary_trie, keyword_csv, keyword_):
+    def __init__(self,data_corpus, wv_model,
+                 sent_emb_model, intent_model,
+                 nli_model, tokenizer, sample_labels, # For zero shot
+                 tf_vec, config_dict, custom_dictionary_trie,
+                 keyword_csv, keyword_):
         """ dataset cols -> [Intents,Keys, Keys_vector,Values]
         """
         # Model && corpus initiate
         # self.model = answer_model
         self.sent_embedding = SentEmbModel(sent_emb_model)
         self.intent_tagging = IntentsClassification(wv_model, self.sent_embedding, intent_model, tf_vec, config_dict, custom_dictionary_trie,keyword_csv, keyword_)
-        
+        self.distil_tagging = DistillEmbModel(nli_model, tokenizer)
+
         # Corpus declaration
         self.dataset = data_corpus
         self.tags = list(config_dict.keys())
+        self.sample_labels = sample_labels
         # self.custom_list = custom_ls
 
         # Corpus parameter declarations
@@ -39,7 +48,7 @@ class DialogueManager():
         # self.db = DataStore()
 
 
-    def semantic_search(self, query_vec, clean_txt, is_ml:bool = False):
+    def semantic_search(self, query_vec, clean_txt, strategy:int = 1):
         """ Search the matching question from the corpus, grasp the "keys" from the probability that passing criterion.
         "one intents" can answer only "one answer"
         # Step to generate a answer dictionary
@@ -52,8 +61,10 @@ class DialogueManager():
         most_relavance_dict= {}
         v_prob = []
         #Step 1 : Generate a key from tagging
-        if is_ml:
+        if strategy == 0:
             tag_dict = self.intent_tagging.predict_tagging(clean_txt) # -> Dictionary with all possible intent
+        elif strategy == 1:
+            tag_dict = self.distil_tagging.tagging(clean_txt, self.sample_labels)
         else :
             tag_dict = self.intent_tagging.rule_base_tagging(clean_txt)
         #Step 2 : Pick the key vector from each intent and measure the similarity

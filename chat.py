@@ -13,6 +13,9 @@ from pythainlp.util import Trie
 from sklearn.feature_extraction.text import CountVectorizer
 from utils.preprocess import get_th_tokens
 
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import pipeline
+
 # from pythainlp.word_vector import WordVector
 from gensim.models import KeyedVectors
 
@@ -70,8 +73,17 @@ if __name__ == "__main__":
     # Declared a dictionary from config.yaml files
     config_dict = cfg["KEYWORD_INTENT"]
 
+    # Load nli model and tokenizer :
+    print("Prepare zero shot model")
+    nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli')
+    tokenizer = AutoTokenizer.from_pretrained("kornwtp/ConGen-RoBERTa-base")
+    candidate_labels = ['วิธีการสมัคร', 'เกณฑ์ในการคัดเลือก', 'คุณสมบัติผู้สมัคร']
+
     print("Let's chat! (type 'quit' to exit)")
-    msg_manager = DialogueManager(data_corpus, wv_model, answer_model, intent_model, tf_vectorizer, config_dict, custom_dictionary_trie, keyword_csv, kw)
+    msg_manager = DialogueManager(data_corpus, wv_model,
+                                answer_model, intent_model,
+                                nli_model, tokenizer, candidate_labels,
+                                tf_vectorizer, config_dict, custom_dictionary_trie, keyword_csv, kw)
 
     while True:
         try:
