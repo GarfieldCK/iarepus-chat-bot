@@ -9,6 +9,7 @@ from models.model import NeuralNet
 from pythainlp.corpus.common import thai_words
 from pythainlp.word_vector import WordVector
 from pythainlp.util import Trie
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 
 import pandas as pd
 
@@ -68,6 +69,17 @@ _dict = {k for k in custom_ls}
 custom_words = _dict.union(thai_words())
 custom_dictionary_trie = Trie(custom_words)
 
+# Load nli model and tokenizer :
+print("Prepare zero shot model")
+nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli')
+tokenizer = AutoTokenizer.from_pretrained("kornwtp/ConGen-RoBERTa-base")
+# tokenizer = AutoTokenizer.from_pretrained("valhalla/distilbart-mnli-12-1")
+candidate_labels = cfg["ZERO_SHOT"]["intents"]
+zs_classifier = pipeline("zero-shot-classification",
+                model=nli_model,
+                tokenizer=tokenizer,
+                )
+
 # Main function here :
 @app.get("/")
 def index_get():
@@ -77,7 +89,10 @@ def index_get():
 @app.post("/predict")
 def predict():
     text = request.get_json().get("message")
-    msg_manager = DialogueManager(data_corpus, wv_model, answer_model, intent_model, tf_vectorizer, config_dict, custom_dictionary_trie, keyword_csv, kw)
+    msg_manager = DialogueManager(data_corpus, wv_model,
+                                answer_model, intent_model,
+                                zs_classifier, candidate_labels,
+                                tf_vectorizer, config_dict, custom_dictionary_trie, keyword_csv, kw)
     response = _get_response(text, msg_manager)
 
     message =  {"answer" : response}

@@ -77,12 +77,17 @@ if __name__ == "__main__":
     print("Prepare zero shot model")
     nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli')
     tokenizer = AutoTokenizer.from_pretrained("kornwtp/ConGen-RoBERTa-base")
-    candidate_labels = ['วิธีการสมัคร', 'เกณฑ์ในการคัดเลือก', 'คุณสมบัติผู้สมัคร']
+    # tokenizer = AutoTokenizer.from_pretrained("valhalla/distilbart-mnli-12-1")
+    candidate_labels = cfg["ZERO_SHOT"]["intents"]
+    zs_classifier = pipeline("zero-shot-classification",
+                    model=nli_model,
+                    tokenizer=tokenizer,
+                    )
 
     print("Let's chat! (type 'quit' to exit)")
     msg_manager = DialogueManager(data_corpus, wv_model,
                                 answer_model, intent_model,
-                                nli_model, tokenizer, candidate_labels,
+                                zs_classifier, candidate_labels,
                                 tf_vectorizer, config_dict, custom_dictionary_trie, keyword_csv, kw)
 
     while True:

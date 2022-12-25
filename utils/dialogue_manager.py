@@ -20,7 +20,7 @@ class DialogueManager():
 
     def __init__(self,data_corpus, wv_model,
                  sent_emb_model, intent_model,
-                 nli_model, tokenizer, sample_labels, # For zero shot
+                 zs_classifier, sample_labels, # For zero shot
                  tf_vec, config_dict, custom_dictionary_trie,
                  keyword_csv, keyword_):
         """ dataset cols -> [Intents,Keys, Keys_vector,Values]
@@ -29,7 +29,8 @@ class DialogueManager():
         # self.model = answer_model
         self.sent_embedding = SentEmbModel(sent_emb_model)
         self.intent_tagging = IntentsClassification(wv_model, self.sent_embedding, intent_model, tf_vec, config_dict, custom_dictionary_trie,keyword_csv, keyword_)
-        self.distil_tagging = DistillEmbModel(nli_model, tokenizer)
+        # self.distil_tagging = DistillEmbModel(nli_model, tokenizer)
+        self.distil_tagging = DistillEmbModel(zs_classifier)
 
         # Corpus declaration
         self.dataset = data_corpus
@@ -69,19 +70,19 @@ class DialogueManager():
             tag_dict = self.intent_tagging.rule_base_tagging(clean_txt)
         #Step 2 : Pick the key vector from each intent and measure the similarity
         tag_dict = self.arrange_intent(tag_dict)
-        # print(tag_dict)
+
         t = list(tag_dict.keys())
+        # print("Check dictionary : {}".format(tag_dict))
+        # print("Check Keys dict here : {}".format(t))
 
         for t in tag_dict:
             answer_keys = self.dataset.loc[self.dataset.Intents == t].Keys_vector.tolist()
-            
             for _, a_key in enumerate(answer_keys):
-                
                 
                 answer_vec = _float_converter(a_key)
                 sim = cosine_similarity(query_vec, answer_vec)
                 voting_prob = self.voting(tag_dict[t], sim)
-                print(" Tags : {} \n Check voting score : {} \n similarity score : {}".format(t,voting_prob, sim))
+                # print(" Tags : {} \n Check voting score : {} \n similarity score : {}".format(t,voting_prob, sim))
 
                 # 3.) If score > threshold, pick a values from "Values" columns and update dictionary as "intent" : "Values"
                 if (voting_prob > self.CONF_SCORE):
